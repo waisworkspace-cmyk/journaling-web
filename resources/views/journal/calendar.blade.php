@@ -23,7 +23,8 @@
             @endforeach
         </div>
 
-        <div class="grid grid-cols-7 grid-rows-5 gap-4 h-[calc(100%-40px)] min-h-[600px]">
+        {{-- UPDATE: Tinggi minimum dinaikkan lagi ke 1100px agar muat untuk foto besar & teks lebih besar --}}
+        <div class="grid grid-cols-7 grid-rows-5 gap-4 min-h-[1100px]">
             @for($i=0; $i < $startDayOfWeek; $i++)
                 <div class="glass-card rounded-2xl p-3 opacity-30 bg-gray-50 border-transparent shadow-none"></div>
             @endfor
@@ -56,7 +57,8 @@
                     </div>
 
                     @if($hasEntry && $photoCount > 0)
-                        <div class="mt-2 w-full h-20 rounded-lg overflow-hidden relative shadow-sm group-hover:shadow-md transition-all">
+                        {{-- Foto tetap besar (h-40) sesuai permintaan sebelumnya --}}
+                        <div class="mt-2 w-full h-40 rounded-lg overflow-hidden relative shadow-sm group-hover:shadow-md transition-all">
                              <div class="h-full flex {{ $slideAnimation }}" style="{{ $widthClass }}">
                                  @foreach($entry->photo_paths as $path)
                                      <div class="h-full w-full flex-shrink-0 bg-gray-100">
@@ -73,7 +75,8 @@
                              @endif
                         </div>
                         <div class="mt-auto z-10 relative">
-                            <p class="text-[10px] text-slate-500 line-clamp-1 mt-1 font-medium">{{ $entry->positive_highlight }}</p>
+                            {{-- UPDATE: Font highlight diperbesar dari text-[10px] ke text-xs --}}
+                            <p class="text-xs text-slate-500 line-clamp-2 mt-1 font-medium">{{ $entry->positive_highlight }}</p>
                         </div>
                     @elseif($isToday)
                         <div class="mt-auto"><span class="text-[10px] font-semibold text-primary uppercase tracking-wide">Today</span></div>
@@ -88,6 +91,7 @@
     </div>
 </div>
 
+{{-- Bagian Modal (Create/Edit) tidak berubah --}}
 @if(isset($showCreateModal) && $showCreateModal)
 @php
     $existingPhotos = isset($entryToEdit) && $entryToEdit->photo_paths ? $entryToEdit->photo_paths : [];
