@@ -2,8 +2,10 @@
 @section('title', 'New Entry')
 @section('content')
 
-<form action="{{ route('journal.store') }}" method="POST" class="h-full flex flex-col items-center justify-center p-4 sm:p-6 bg-black/10 backdrop-blur-[2px]">
-    @csrf <div class="relative w-full max-w-[640px] max-h-[90vh] flex flex-col bg-white/85 backdrop-blur-2xl border border-white/60 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] rounded-2xl overflow-hidden ring-1 ring-black/5 animate-fade-in">
+<form action="{{ route('journal.store') }}" method="POST" enctype="multipart/form-data" class="h-full flex flex-col items-center justify-center p-4 sm:p-6 bg-black/10 backdrop-blur-[2px]">
+    @csrf
+    
+    <div class="relative w-full max-w-[640px] max-h-[90vh] flex flex-col bg-white/85 backdrop-blur-2xl border border-white/60 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] rounded-2xl overflow-hidden ring-1 ring-black/5 animate-fade-in">
         
         <header class="flex items-center justify-between px-6 py-4 border-b border-slate-200/60 shrink-0 bg-white/60 sticky top-0 z-10 backdrop-blur-md">
             <a href="{{ route('journal.index') }}" class="text-primary hover:text-blue-600 text-[17px] font-normal transition-colors px-2 py-1 rounded hover:bg-black/5">Cancel</a>
@@ -20,10 +22,12 @@
                 <div class="px-6 py-4">
                     <h3 class="text-slate-900 text-sm font-semibold mb-3 px-1">Moments</h3>
                     <div class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x">
-                        <div class="shrink-0 w-32 h-32 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center gap-2 cursor-pointer text-slate-400 hover:text-primary hover:bg-slate-100 transition-all">
-                            <span class="material-symbols-outlined">add_a_photo</span>
-                            <span class="text-xs font-medium">Add Photo</span>
+                        <div onclick="document.getElementById('photoInput').click()" class="shrink-0 w-32 h-32 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center gap-2 cursor-pointer text-slate-400 hover:text-primary hover:bg-slate-100 transition-all relative overflow-hidden">
+                            <span class="material-symbols-outlined" id="photoIcon">add_a_photo</span>
+                            <span class="text-xs font-medium" id="photoText">Add Photo</span>
+                            <img id="photoPreview" class="absolute inset-0 w-full h-full object-cover hidden">
                         </div>
+                        <input type="file" name="photo" id="photoInput" class="hidden" accept="image/*" onchange="previewImage(event)">
                     </div>
 
                     <div class="h-px bg-slate-200 mx-6 my-6"></div>
@@ -32,11 +36,12 @@
                         <div class="flex flex-col gap-3">
                             <label class="text-slate-900 text-sm font-semibold">Mood</label>
                             <div class="flex gap-2 flex-wrap">
-                                <input type="hidden" name="mood" id="moodInput" value="happy">
-                                <button type="button" class="h-10 w-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-xl">😢</button>
-                                <button type="button" class="h-10 w-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-xl">😐</button>
-                                <button type="button" class="h-10 w-10 flex items-center justify-center rounded-lg bg-primary text-white shadow-lg text-xl scale-105">🙂</button>
-                                <button type="button" class="h-10 w-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-xl">😀</button>
+                                <input type="hidden" name="mood" id="moodInput" value="neutral">
+                                
+                                <button type="button" onclick="selectMood('sad', this)" class="mood-btn h-10 w-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-xl transition-all">😢</button>
+                                <button type="button" onclick="selectMood('neutral', this)" class="mood-btn h-10 w-10 flex items-center justify-center rounded-lg bg-primary text-white shadow-lg text-xl scale-105 ring-2 ring-blue-500/20 transition-all">😐</button>
+                                <button type="button" onclick="selectMood('happy', this)" class="mood-btn h-10 w-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-xl transition-all">🙂</button>
+                                <button type="button" onclick="selectMood('excited', this)" class="mood-btn h-10 w-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-xl transition-all">😀</button>
                             </div>
                         </div>
                     </div>
@@ -44,9 +49,11 @@
                     <div class="flex flex-col gap-4 mb-8">
                         <div class="flex justify-between items-end">
                             <label class="text-slate-900 text-sm font-semibold">Daily Rating</label>
-                            <span class="text-primary text-xl font-bold font-display">7<span class="text-slate-400 text-sm font-medium ml-1">/ 10</span></span>
+                            <span class="text-primary text-xl font-bold font-display"><span id="ratingValue">7</span><span class="text-slate-400 text-sm font-medium ml-1">/ 10</span></span>
                         </div>
-                        <input name="rating" type="range" min="1" max="10" value="7" class="w-full accent-primary h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        <input name="rating" type="range" min="1" max="10" value="7" 
+                               class="w-full accent-primary h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                               oninput="document.getElementById('ratingValue').innerText = this.value">
                     </div>
 
                     <div class="h-px bg-slate-200 mx-6 my-6"></div>
@@ -70,4 +77,35 @@
         </div>
     </div>
 </form>
+
+<script>
+    // Logic untuk Ganti Style Tombol Mood
+    function selectMood(moodValue, btnElement) {
+        document.getElementById('moodInput').value = moodValue;
+        
+        // Reset semua tombol
+        document.querySelectorAll('.mood-btn').forEach(btn => {
+            btn.className = 'mood-btn h-10 w-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-xl transition-all';
+        });
+
+        // Highlight tombol aktif
+        btnElement.className = 'mood-btn h-10 w-10 flex items-center justify-center rounded-lg bg-primary text-white shadow-lg text-xl scale-105 ring-2 ring-blue-500/20 transition-all';
+    }
+
+    // Logic Preview Gambar
+    function previewImage(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.getElementById('photoPreview');
+                img.src = e.target.result;
+                img.classList.remove('hidden');
+                document.getElementById('photoIcon').classList.add('hidden');
+                document.getElementById('photoText').classList.add('hidden');
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+</script>
 @endsection

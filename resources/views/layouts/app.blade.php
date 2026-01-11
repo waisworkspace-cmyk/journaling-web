@@ -52,6 +52,31 @@
                 radial-gradient(at 0% 100%, rgba(19, 127, 236, 0.05) 0px, transparent 50%);
             background-attachment: fixed;
         }
+        /* ... style yang sudah ada ... */
+
+/* Animasi Slider Otomatis */
+@keyframes slide-2 {
+    0%, 45% { transform: translateX(0); }
+    50%, 95% { transform: translateX(-100%); }
+    100% { transform: translateX(0); }
+}
+@keyframes slide-3 {
+    0%, 30% { transform: translateX(0); }
+    33%, 63% { transform: translateX(-100%); }
+    66%, 96% { transform: translateX(-200%); }
+    100% { transform: translateX(0); }
+}
+@keyframes slide-4 {
+    0%, 22% { transform: translateX(0); }
+    25%, 47% { transform: translateX(-100%); }
+    50%, 72% { transform: translateX(-200%); }
+    75%, 97% { transform: translateX(-300%); }
+    100% { transform: translateX(0); }
+}
+
+.animate-slide-2 { animation: slide-2 8s infinite cubic-bezier(0.4, 0, 0.2, 1); }
+.animate-slide-3 { animation: slide-3 12s infinite cubic-bezier(0.4, 0, 0.2, 1); }
+.animate-slide-4 { animation: slide-4 16s infinite cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
 <body class="font-display text-slate-800 ambient-bg h-screen w-screen overflow-hidden flex selection:bg-primary selection:text-white">
