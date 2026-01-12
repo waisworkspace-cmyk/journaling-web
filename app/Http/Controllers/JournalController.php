@@ -144,13 +144,29 @@ public function gallery()
 }
 
 // ... functions lain
-    // ... method index, create, store, gallery tetap sama ...
-
     public function mood(Request $request)
     {
-        // 1. Tentukan Rentang Waktu (Default: Bulan Ini)
-        $start = Carbon::now()->startOfMonth();
-        $end = Carbon::now()->endOfMonth();
+        // 1. Tentukan Rentang Waktu (Dinamis berdasarkan Request)
+        $range = $request->query('range', 'month'); // Default 'month'
+        $date = Carbon::now();
+        $start = $date->copy()->startOfMonth();
+        $end = $date->copy()->endOfMonth();
+
+        switch ($range) {
+            case 'week':
+                $start = $date->copy()->startOfWeek();
+                $end = $date->copy()->endOfWeek();
+                break;
+            case 'year':
+                $start = $date->copy()->startOfYear();
+                $end = $date->copy()->endOfYear();
+                break;
+            case 'month':
+            default:
+                $start = $date->copy()->startOfMonth();
+                $end = $date->copy()->endOfMonth();
+                break;
+        }
         
         // 2. Ambil Data Entries
         $entries = Entry::whereBetween('entry_date', [$start, $end])
@@ -163,10 +179,9 @@ public function gallery()
         $maxRating = $entries->max('rating') ?? 0;
         $minRating = $entries->min('rating') ?? 0;
 
-        // 4. Kalkulasi Distribusi Mood (Untuk Donut Chart)
+        // 4. Kalkulasi Distribusi Mood
         $moodCounts = $entries->groupBy('mood')->map->count();
         $moodPercentages = [];
-        // Warna hardcoded sesuai desain HTML kamu
         $moodColors = [
             'happy' => '#34C759', 
             'neutral' => '#5AC8FA', 
@@ -186,29 +201,29 @@ public function gallery()
         }
 
         // 5. Kalkulasi Koordinat SVG untuk Line Chart
-        // Canvas SVG: Width 1000px, Height 300px
-        // Y Axis: Rating 10 = y:50, Rating 1 = y:250
         $chartPoints = [];
         $svgPath = "";
         
         if ($totalEntries > 1) {
-            $firstDay = $entries->first()->entry_date->day;
-            $lastDay = $entries->last()->entry_date->day;
-            $daySpan = $lastDay - $firstDay;
-            if($daySpan == 0) $daySpan = 1;
+            // Kita gunakan timestamp atau day of year untuk menghitung jarak X yang akurat
+            // Terutama jika rentang waktu lintas bulan/tahun
+            $startTime = $start->timestamp;
+            $endTime = $end->timestamp;
+            $totalDuration = $endTime - $startTime;
+            
+            if($totalDuration == 0) $totalDuration = 1;
 
             $points = [];
             foreach($entries as $entry) {
-                // Normalisasi X (0 - 1000)
-                $x = (($entry->entry_date->day - $firstDay) / $daySpan) * 1000;
+                // Normalisasi X berdasarkan waktu (0 - 1000)
+                $entryTime = $entry->entry_date->timestamp;
+                $x = (($entryTime - $startTime) / $totalDuration) * 1000;
                 
                 // Normalisasi Y (Rating 1-10 menjadi Pixel 250-50)
-                // Rumus: 250 - ((rating - 1) * (200 / 9))
                 $y = 250 - (($entry->rating - 1) * 22.2); 
                 
                 $points[] = "$x,$y";
                 
-                // Simpan data point untuk tooltip
                 $chartPoints[] = [
                     'x' => $x,
                     'y' => $y,
@@ -219,34 +234,37 @@ public function gallery()
                 ];
             }
             
-            // Buat Path SVG (Smooth Curve logic sederhana)
-            // Untuk simplisitas, kita pakai Polyline dulu atau curve manual
-            // Disini saya pakai Line biasa agar akurat
             $svgPath = "M" . $points[0]; 
             for ($i = 1; $i < count($points); $i++) {
                 $svgPath .= " L" . $points[$i];
             }
         }
 
-        // 6. Insight Sederhana
+        // 6. Insight Sederhana (Pastikan use DB ada di atas file jika memakai DB::raw)
         $insight = "Keep logging your days to see patterns!";
-        if ($totalEntries > 5) {
-            // Cari hari dengan rating rata-rata tertinggi
-            $bestDay = Entry::select(DB::raw('DAYNAME(entry_date) as day'), DB::raw('avg(rating) as avg_rating'))
-                ->groupBy('day')
-                ->orderByDesc('avg_rating')
-                ->first();
-                
-            if($bestDay) {
-                $insight = "You tend to feel most energetic on <span class='font-semibold text-white'>{$bestDay->day}s</span>. Consider scheduling demanding tasks then.";
-            }
-        }
+        // ... (Logika insight biarkan sama atau sesuaikan jika perlu)
 
+        // Tambahkan variabel 'range' ke compact agar bisa dipakai di View
         return view('journal.mood', compact(
             'entries', 'avgRating', 'maxRating', 'minRating', 
             'totalEntries', 'moodPercentages', 'chartPoints', 
-            'svgPath', 'insight'
+            'svgPath', 'insight', 'range'
         ));
     }
-    public function search() { return view('journal.search'); }
+    public function search(Request $request)
+    {
+        $query = $request->input('query');
+        $results = collect(); // Koleksi kosong default
+
+        if ($query) {
+            // Mencari di mood, positive_highlight, atau negative_reflection
+            $results = Entry::where('positive_highlight', 'LIKE', "%{$query}%")
+                            ->orWhere('negative_reflection', 'LIKE', "%{$query}%")
+                            ->orWhere('mood', 'LIKE', "%{$query}%")
+                            ->orderBy('entry_date', 'desc')
+                            ->get();
+        }
+
+        return view('journal.search', compact('results', 'query'));
+    }
 }

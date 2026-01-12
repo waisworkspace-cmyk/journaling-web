@@ -36,10 +36,24 @@
             <h1 class="text-xl font-bold text-slate-900 tracking-tight">Mood Analytics</h1>
         </div>
         <div class="bg-slate-200/50 p-0.5 rounded-lg flex text-[13px] font-medium shadow-inner ring-1 ring-black/5">
-            <button class="px-5 py-1.5 text-slate-500 hover:text-slate-700 transition-colors rounded-[6px]">Week</button>
-            <button class="px-5 py-1.5 bg-white text-slate-900 rounded-[6px] shadow-sm ring-1 ring-black/5 transition-all">Month</button>
-            <button class="px-5 py-1.5 text-slate-500 hover:text-slate-700 transition-colors rounded-[6px]">Year</button>
-        </div>
+    @php
+        $activeClass = 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5';
+        $inactiveClass = 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50';
+    @endphp
+
+    <a href="{{ route('journal.mood', ['range' => 'week']) }}" 
+       class="px-5 py-1.5 rounded-[6px] transition-all {{ $range == 'week' ? $activeClass : $inactiveClass }}">
+       Week
+    </a>
+    <a href="{{ route('journal.mood', ['range' => 'month']) }}" 
+       class="px-5 py-1.5 rounded-[6px] transition-all {{ $range == 'month' ? $activeClass : $inactiveClass }}">
+       Month
+    </a>
+    <a href="{{ route('journal.mood', ['range' => 'year']) }}" 
+       class="px-5 py-1.5 rounded-[6px] transition-all {{ $range == 'year' ? $activeClass : $inactiveClass }}">
+       Year
+    </a>
+</div>
     </header>
 
     {{-- Scrollable Content --}}
@@ -89,7 +103,8 @@
                         </div>
 
                         {{-- SVG CHART --}}
-                        <svg class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 1000 300">
+                        {{-- Ubah viewBox dimulai dari -60 dan lebar ditambah 60 (jadi 1060) agar label di kiri terlihat --}}
+<svg class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="-60 0 1060 300">
                             <defs>
                                 <linearGradient id="gradientMood" x1="0%" x2="100%" y1="0%" y2="0%">
                                     <stop offset="0%" style="stop-color:#5856D6;stop-opacity:1"></stop>
