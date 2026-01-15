@@ -3,17 +3,12 @@
 @section('title', 'Detailed Journal Entry')
 
 @section('content')
-{{-- Style khusus untuk halaman ini sesuai request --}}
 <style>
     /* Custom Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.1); border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.2); }
-    
-    /* Range Slider Styling */
-    input[type=range] { -webkit-appearance: none; background: transparent; }
-    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; }
     
     /* Glass Card Effect */
     .glass-card {
@@ -23,7 +18,6 @@
         backdrop-filter: blur(10px);
     }
     
-    /* Hide scrollbar for gallery */
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
@@ -55,7 +49,7 @@
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Moments</h3>
                         <label for="photoInput" class="text-primary text-sm font-medium cursor-pointer hover:underline">Add photos</label>
-                        <input type="file" name="photos[]" id="photoInput" class="hidden" accept="image/*" multiple onchange="previewImages(event)">
+                        <input type="file" name="photos[]" id="photoInput" class="hidden" accept="image/*" multiple onchange="handleFileSelect(event)">
                     </div>
                     
                     <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide snap-x" id="photoContainer">
@@ -64,24 +58,29 @@
                             <span class="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors">add_a_photo</span>
                         </div>
 
-                        {{-- Existing Photos --}}
+                        {{-- FOTO LAMA (Database) --}}
                         @if(isset($entryToEdit) && $entryToEdit->photo_paths)
                             @foreach($entryToEdit->photo_paths as $path)
-                                <div class="shrink-0 w-28 h-28 rounded-2xl overflow-hidden relative border border-white shadow-sm group">
+                                <div class="existing-photo-item shrink-0 w-28 h-28 rounded-2xl overflow-hidden relative border border-white shadow-sm group transition-all duration-300">
                                     <img src="{{ asset('storage/' . $path) }}" class="w-full h-full object-cover">
+                                    
+                                    {{-- Checkbox hidden untuk penghapusan --}}
+                                    <input type="checkbox" name="remove_photos[]" value="{{ $path }}" class="hidden delete-checkbox">
+
+                                    {{-- Tombol Delete --}}
                                     <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <label class="cursor-pointer bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-colors shadow-sm">
-                                            <input type="checkbox" name="remove_photos[]" value="{{ $path }}" class="hidden">
+                                        <button type="button" onclick="markForDeletion(this)" class="bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-colors shadow-sm transform hover:scale-110">
                                             <span class="material-symbols-outlined text-[18px]">delete</span>
-                                        </label>
+                                        </button>
                                     </div>
                                 </div>
                             @endforeach
                         @endif
                         
-                        {{-- Preview New Photos will appear here --}}
+                        {{-- FOTO BARU (Preview JS) --}}
                         <div id="newPhotoPreviews" class="flex gap-4"></div>
                     </div>
+                    <p class="text-xs text-slate-400 mt-2">You can add up to 4 photos total.</p>
                 </div>
 
                 {{-- 2. METRICS (MOOD, WEATHER, RATING) --}}
@@ -104,7 +103,7 @@
                             </div>
                         </div>
 
-                        {{-- Weather Selector (New Feature) --}}
+                        {{-- Weather Selector --}}
                         <div class="space-y-3">
                             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Weather</h3>
                             @php $currentWeather = $entryToEdit->weather ?? 'sunny'; @endphp
@@ -131,15 +130,15 @@
                             <span class="text-primary font-bold"><span id="ratingDisplay">{{ $currentRating }}</span> / 10</span>
                         </div>
                         <div class="relative h-6 flex items-center group">
-                            <input name="rating" class="w-full absolute z-20 opacity-0 cursor-pointer h-full" max="10" min="1" type="range" value="{{ $currentRating }}" oninput="updateRating(this.value)"/>
-                            
-                            {{-- Custom Track --}}
-                            <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden relative z-10 border border-slate-200/50">
-                                <div id="ratingFill" class="h-full bg-primary rounded-full transition-all duration-150 ease-out" style="width: {{ $currentRating * 10 }}%;"></div>
+                            <input name="rating" id="ratingInput" 
+                                class="absolute inset-0 w-full h-full z-50 opacity-0 cursor-pointer" 
+                                style="-webkit-appearance: none;"
+                                max="10" min="1" type="range" value="{{ $currentRating }}" 
+                                oninput="updateRating(this.value)" />
+                            <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden relative z-10 border border-slate-200/50 pointer-events-none">
+                                <div id="ratingFill" class="h-full bg-primary rounded-full transition-all duration-75 ease-out" style="width: {{ $currentRating * 10 }}%;"></div>
                             </div>
-                            
-                            {{-- Custom Thumb Handle --}}
-                            <div id="ratingHandle" class="h-6 w-6 bg-white rounded-full shadow-lg absolute z-10 pointer-events-none transform -translate-x-1/2 border border-slate-200 transition-all duration-150 ease-out flex items-center justify-center" style="left: {{ $currentRating * 10 }}%;">
+                            <div id="ratingHandle" class="h-6 w-6 bg-white rounded-full shadow-lg absolute z-10 pointer-events-none transform -translate-x-1/2 border border-slate-200 transition-all duration-75 ease-out flex items-center justify-center" style="left: {{ $currentRating * 10 }}%;">
                                 <div class="w-2 h-2 bg-primary rounded-full"></div>
                             </div>
                         </div>
@@ -149,8 +148,6 @@
 
             {{-- MAIN TEXT AREAS --}}
             <div class="space-y-6">
-                
-                {{-- 1. Positivity --}}
                 <section class="glass-card rounded-3xl p-8 hover:shadow-md transition-shadow duration-300">
                     <header class="flex items-center gap-3 mb-4">
                         <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 shadow-sm">
@@ -164,7 +161,6 @@
                     <textarea name="positive" class="w-full bg-transparent border-none focus:ring-0 p-0 text-slate-700 text-lg placeholder:text-slate-300 min-h-[120px] resize-none leading-relaxed" placeholder="Share your wins and happy moments...">{{ $entryToEdit->positive_highlight ?? '' }}</textarea>
                 </section>
 
-                {{-- 2. Improvement (Negative) --}}
                 <section class="glass-card rounded-3xl p-8 hover:shadow-md transition-shadow duration-300">
                     <header class="flex items-center gap-3 mb-4">
                         <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shadow-sm">
@@ -178,7 +174,6 @@
                     <textarea name="negative" class="w-full bg-transparent border-none focus:ring-0 p-0 text-slate-700 text-lg placeholder:text-slate-300 min-h-[120px] resize-none leading-relaxed" placeholder="Reflect on areas for growth...">{{ $entryToEdit->negative_reflection ?? '' }}</textarea>
                 </section>
 
-                {{-- 3. Gratitude (New) --}}
                 <section class="glass-card rounded-3xl p-8 hover:shadow-md transition-shadow duration-300">
                     <header class="flex items-center gap-3 mb-4">
                         <div class="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 shadow-sm">
@@ -192,34 +187,31 @@
                     <textarea name="gratitude" class="w-full bg-transparent border-none focus:ring-0 p-0 text-slate-700 text-lg placeholder:text-slate-300 min-h-[120px] resize-none leading-relaxed" placeholder="I'm thankful for...">{{ $entryToEdit->gratitude ?? '' }}</textarea>
                 </section>
 
-                {{-- 4. Goals & Affirmations (Split) --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <section class="glass-card rounded-3xl p-8 hover:shadow-md transition-shadow duration-300">
-                        <header class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm">
-                                <span class="material-symbols-outlined font-bold">flag</span>
-                            </div>
-                            <div>
-                                <h3 class="text-lg font-bold text-slate-900">Goals</h3>
-                                <p class="text-slate-400 text-sm">I will make tomorrow great by...</p>
-                            </div>
-                        </header>
-                        <textarea name="goals" class="w-full bg-transparent border-none focus:ring-0 p-0 text-slate-700 text-lg placeholder:text-slate-300 min-h-[120px] resize-none leading-relaxed" placeholder="Define your focus...">{{ $entryToEdit->goals ?? '' }}</textarea>
-                    </section>
+                <section class="glass-card rounded-3xl p-8 hover:shadow-md transition-shadow duration-300">
+                    <header class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm">
+                            <span class="material-symbols-outlined font-bold">flag</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900">Goals</h3>
+                            <p class="text-slate-400 text-sm">I will make tomorrow great by...</p>
+                        </div>
+                    </header>
+                    <textarea name="goals" class="w-full bg-transparent border-none focus:ring-0 p-0 text-slate-700 text-lg placeholder:text-slate-300 min-h-[120px] resize-none leading-relaxed" placeholder="Define your focus...">{{ $entryToEdit->goals ?? '' }}</textarea>
+                </section>
 
-                    <section class="glass-card rounded-3xl p-8 hover:shadow-md transition-shadow duration-300">
-                        <header class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-600 shadow-sm">
-                                <span class="material-symbols-outlined font-bold">colors_spark</span>
-                            </div>
-                            <div>
-                                <h3 class="text-lg font-bold text-slate-900">Affirmations</h3>
-                                <p class="text-slate-400 text-sm">Today I always am...</p>
-                            </div>
-                        </header>
-                        <textarea name="affirmations" class="w-full bg-transparent border-none focus:ring-0 p-0 text-slate-700 text-lg placeholder:text-slate-300 min-h-[120px] resize-none leading-relaxed" placeholder="Speak kindness to yourself...">{{ $entryToEdit->affirmations ?? '' }}</textarea>
-                    </section>
-                </div>
+                <section class="glass-card rounded-3xl p-8 hover:shadow-md transition-shadow duration-300">
+                    <header class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-600 shadow-sm">
+                            <span class="material-symbols-outlined font-bold">auto_awesome</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900">Affirmations</h3>
+                            <p class="text-slate-400 text-sm">Today I always am...</p>
+                        </div>
+                    </header>
+                    <textarea name="affirmations" class="w-full bg-transparent border-none focus:ring-0 p-0 text-slate-700 text-lg placeholder:text-slate-300 min-h-[120px] resize-none leading-relaxed" placeholder="Speak kindness to yourself...">{{ $entryToEdit->affirmations ?? '' }}</textarea>
+                </section>
             </div>
 
             {{-- FOOTER --}}
@@ -234,47 +226,84 @@
 </div>
 
 <script>
-    // Logic untuk Slider Rating Visual
+    // --- 1. LOGIC HAPUS FOTO LAMA (Fix Utama) ---
+    function markForDeletion(btnElement) {
+        // Cari container foto (parent dari tombol)
+        const container = btnElement.closest('.existing-photo-item');
+        
+        // Cari checkbox di dalamnya dan centang
+        const checkbox = container.querySelector('.delete-checkbox');
+        checkbox.checked = true;
+
+        // Sembunyikan foto secara visual agar user tahu sudah "dihapus"
+        container.style.display = 'none';
+        
+        // (Foto akan benar-benar dihapus dari server saat form disubmit/Save)
+    }
+
+    // --- 2. LOGIC HAPUS FOTO BARU ---
+    const dt = new DataTransfer();
+    
+    function handleFileSelect(event) {
+        const files = event.target.files;
+        for (let i = 0; i < files.length; i++) {
+            dt.items.add(files[i]);
+        }
+        document.getElementById('photoInput').files = dt.files;
+        renderPreviews();
+    }
+
+    function renderPreviews() {
+        const container = document.getElementById('newPhotoPreviews');
+        container.innerHTML = '';
+        Array.from(dt.files).forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const div = document.createElement('div');
+                div.className = 'shrink-0 w-28 h-28 rounded-2xl overflow-hidden relative border border-white shadow-sm group';
+                div.innerHTML = `
+                    <img src="${e.target.result}" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button type="button" onclick="removeNewFile(${index})" class="bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-colors shadow-sm transform hover:scale-110">
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            }
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function removeNewFile(index) {
+        dt.items.remove(index);
+        document.getElementById('photoInput').files = dt.files;
+        renderPreviews();
+    }
+
+    // --- 3. LOGIC LAINNYA ---
     function updateRating(val) {
         document.getElementById('ratingDisplay').innerText = val;
-        // Update lebar fill bar
         document.getElementById('ratingFill').style.width = (val * 10) + '%';
-        // Update posisi handle
         document.getElementById('ratingHandle').style.left = (val * 10) + '%';
     }
 
-    // Logic untuk Mood & Weather Selector
     function selectOption(type, value, btn) {
         document.getElementById(type + 'Input').value = value;
-        
-        // Reset tombol dalam group yang sama
         const buttons = btn.parentElement.querySelectorAll('button');
         buttons.forEach(b => {
-            b.className = 'h-10 w-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 shadow-sm transition-all ' + (type === 'mood' ? 'grayscale hover:grayscale-0' : '');
+            if(type === 'mood') {
+                 b.className = 'h-10 w-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 shadow-sm transition-all grayscale hover:grayscale-0';
+            } else {
+                 b.className = 'weather-btn h-10 w-10 flex items-center justify-center rounded-xl border transition-all bg-white border-slate-100 text-slate-400';
+            }
         });
-
-        // Highlight tombol aktif
         btn.className = 'h-10 w-10 flex items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-blue-500/20 border-transparent transition-all transform scale-105';
     }
 
-    // Logic Preview Gambar
-    function previewImages(event) {
-        const container = document.getElementById('newPhotoPreviews');
-        container.innerHTML = '';
-        const files = event.target.files;
-
-        if (files) {
-            for(let i=0; i<files.length; i++) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const div = document.createElement('div');
-                    div.className = 'shrink-0 w-28 h-28 rounded-2xl overflow-hidden relative border border-white shadow-sm';
-                    div.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
-                    container.appendChild(div);
-                }
-                reader.readAsDataURL(files[i]);
-            }
-        }
-    }
+    document.addEventListener("DOMContentLoaded", function() {
+        const initialVal = document.getElementById('ratingInput').value;
+        updateRating(initialVal);
+    });
 </script>
 @endsection
