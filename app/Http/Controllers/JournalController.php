@@ -139,16 +139,33 @@ class JournalController extends Controller
         $maxRating = $entries->max('rating') ?? 0;
         $minRating = $entries->min('rating') ?? 0;
 
+        // --- 1. MOOD STATISTICS ---
         $moodCounts = $entries->groupBy('mood')->map->count();
         $moodPercentages = [];
         $moodColors = ['happy' => '#34C759', 'neutral' => '#5AC8FA', 'sad' => '#5856D6', 'anxious' => '#FF9500', 'excited' => '#AF52DE'];
         
         foreach($moodColors as $mood => $color) {
             $count = $moodCounts->get($mood) ?? 0;
-            $percent = $totalEntries > 0 ? ($count / $totalEntries) * 100 : 0;
-            $moodPercentages[$mood] = ['count' => $count, 'percent' => round($percent), 'color' => $color];
+            $percent = $totalEntries > 0 ? round(($count / $totalEntries) * 100) : 0;
+            $moodPercentages[$mood] = ['count' => $count, 'percent' => $percent, 'color' => $color];
         }
 
+        // --- 2. WEATHER STATISTICS (BARU) ---
+        // Menghitung rata-rata rating berdasarkan cuaca
+        $weatherStats = $entries->groupBy('weather')->map(function ($group) {
+            return [
+                'count' => $group->count(),
+                'avg_rating' => round($group->avg('rating'), 1),
+            ];
+        });
+        // Pastikan default value ada agar tidak error di view
+        $weatherData = [
+            'sunny' => $weatherStats->get('sunny') ?? ['count' => 0, 'avg_rating' => 0],
+            'cloudy' => $weatherStats->get('cloudy') ?? ['count' => 0, 'avg_rating' => 0],
+            'rainy' => $weatherStats->get('rainy') ?? ['count' => 0, 'avg_rating' => 0],
+        ];
+
+        // --- 3. CHART DATA ---
         $chartPoints = [];
         $svgPath = "";
         
@@ -169,20 +186,40 @@ class JournalController extends Controller
             for ($i = 1; $i < count($points); $i++) { $svgPath .= " L" . $points[$i]; }
         }
 
+        // --- 4. RECENT FOCUS (Goals & Affirmations) ---
+        // Ambil 3 entry terakhir yang memiliki goals/affirmations
+        $recentFocus = Entry::whereNotNull('goals')
+                            ->orWhereNotNull('affirmations')
+                            ->orderBy('entry_date', 'desc')
+                            ->take(3)
+                            ->get();
+
         $insight = "Keep logging your days to see patterns!";
-        return view('journal.mood', compact('entries', 'avgRating', 'maxRating', 'minRating', 'totalEntries', 'moodPercentages', 'chartPoints', 'svgPath', 'insight', 'range'));
+        
+        return view('journal.mood', compact(
+            'entries', 'avgRating', 'maxRating', 'minRating', 'totalEntries', 
+            'moodPercentages', 'chartPoints', 'svgPath', 'insight', 'range',
+            'weatherData', 'recentFocus' // Variable baru dikirim ke view
+        ));
     }
 
     public function search(Request $request)
     {
         $query = $request->input('query');
         $results = collect();
+        
         if ($query) {
-            $results = Entry::where('positive_highlight', 'LIKE', "%{$query}%")
-                            ->orWhere('negative_reflection', 'LIKE', "%{$query}%")
-                            ->orWhere('mood', 'LIKE', "%{$query}%")
-                            ->orderBy('entry_date', 'desc')
-                            ->get();
+            $results = Entry::where(function($q) use ($query) {
+                            $q->where('positive_highlight', 'LIKE', "%{$query}%")
+                              ->orWhere('negative_reflection', 'LIKE', "%{$query}%")
+                              ->orWhere('gratitude', 'LIKE', "%{$query}%")     // Aspek Gratitude
+                              ->orWhere('goals', 'LIKE', "%{$query}%")         // Aspek Goals
+                              ->orWhere('affirmations', 'LIKE', "%{$query}%")  // Aspek Affirmations
+                              ->orWhere('mood', 'LIKE', "%{$query}%")          // Aspek Mood
+                              ->orWhere('weather', 'LIKE', "%{$query}%");      // Aspek Cuaca
+                        })
+                        ->orderBy('entry_date', 'desc')
+                        ->get();
         }
         return view('journal.search', compact('results', 'query'));
     }
