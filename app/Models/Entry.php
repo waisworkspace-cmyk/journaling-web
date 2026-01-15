@@ -11,16 +11,20 @@ class Entry extends Model
 
     protected $fillable = [
         'entry_date',
+        'user_id',
         'mood',
-        'weather',
+        'weather', // Baru
         'rating',
         'positive_highlight',
         'negative_reflection',
-        'photo_paths'
+        'gratitude', // Baru
+        'goals', // Baru
+        'affirmations', // Baru
+        'photo_paths',
     ];
 
     protected $casts = [
         'entry_date' => 'date',
-        'photo_paths' => 'array', // Agar otomatis jadi JSON saat simpan, dan Array saat diambil
+        'photo_paths' => 'array',
     ];
 }

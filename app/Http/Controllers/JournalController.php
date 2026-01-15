@@ -57,26 +57,32 @@ class JournalController extends Controller
     }
     // --------------------------------
 
+    // ... method lainnya tetap sama ...
+
     public function store(Request $request)
     {
         $request->validate([
             'date' => 'required|date',
             'rating' => 'required|integer|min:1|max:10',
             'mood' => 'nullable|string',
+            'weather' => 'nullable|string', // Validasi baru
             'photos.*' => 'nullable|image|max:5120',
         ]);
 
         $entry = Entry::firstOrNew(['entry_date' => $request->date]);
         
         $entry->mood = $request->mood;
+        $entry->weather = $request->weather; // Simpan weather
         $entry->rating = $request->rating;
         $entry->positive_highlight = $request->positive;
         $entry->negative_reflection = $request->negative;
+        $entry->gratitude = $request->gratitude; // Simpan gratitude
+        $entry->goals = $request->goals; // Simpan goals
+        $entry->affirmations = $request->affirmations; // Simpan affirmations
 
-        // Ambil foto lama
+        // --- LOGIC FOTO (TETAP SAMA SEPERTI SEBELUMNYA) ---
         $currentPhotos = $entry->photo_paths ?? [];
 
-        // Hapus Foto
         if ($request->has('remove_photos')) {
             $photosToRemove = $request->remove_photos;
             foreach ($photosToRemove as $pathToRemove) {
@@ -85,7 +91,6 @@ class JournalController extends Controller
             $currentPhotos = array_values(array_diff($currentPhotos, $photosToRemove));
         }
 
-        // Upload Foto Baru
         if ($request->hasFile('photos')) {
             foreach($request->file('photos') as $photo) {
                 if (count($currentPhotos) < 4) {
