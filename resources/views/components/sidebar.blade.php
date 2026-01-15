@@ -2,7 +2,7 @@
     <div class="p-6 h-16 flex items-center shrink-0 pb-2">
         <h1 class="text-xl font-semibold tracking-tight text-slate-800 flex items-center gap-2">
             <span class="material-symbols-outlined text-primary filled">spa</span>
-            Digital Sanctuary
+            Wais Alqurni
         </h1>
     </div>
     
