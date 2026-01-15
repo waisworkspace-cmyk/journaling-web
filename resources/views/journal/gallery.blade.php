@@ -13,10 +13,6 @@
     <header class="h-16 px-8 border-b border-slate-200/60 flex items-center justify-between bg-white/40 backdrop-blur-md shrink-0 sticky top-0 z-20">
         <h1 class="text-xl font-bold text-slate-900 tracking-tight">Gallery</h1>
         
-        <div class="bg-slate-200/50 p-0.5 rounded-lg flex text-[13px] font-medium shadow-inner ring-1 ring-black/5">
-            <button class="px-5 py-1.5 bg-white text-slate-900 rounded-[6px] shadow-sm ring-1 ring-black/5 transition-all">Photos</button>
-            <button class="px-5 py-1.5 text-slate-500 hover:text-slate-700 transition-colors cursor-not-allowed opacity-60">Albums</button>
-        </div>
     </header>
 
     {{-- Scrollable Content --}}
